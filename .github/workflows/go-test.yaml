@@ -59,7 +59,6 @@ jobs:
           base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
         run: |+
 
-          set -x
           # validate coverage.out
 
           if ! [[ -f coverage.out ]]; then
@@ -170,7 +169,7 @@ jobs:
               (*) echo "::error::unknown grouping $grouping" && exit 1 ;;
             esac
 
-            if [[ -z "$base_coverage" ]]; then
+            if [[ -z "${base_coverage:-}" ]]; then
               echo "Test coverage for **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): **$(percent ${all_cov} ${all_stmts})%**"
               if [[ ${#stmts[@]} -gt 0 ]]; then
                 echo
@@ -208,7 +207,7 @@ jobs:
                 done | sort -u
               fi
             fi
-          }
+          } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
 
       - uses: actions/upload-artifact@v7
         with:
