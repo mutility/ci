@@ -60,7 +60,7 @@ jobs:
           TAG="<!-- go-coverage-tag: ${label} -->"
           echo -e "\n\n${TAG}" >> new-coverage/coverage.md
           COMMENT_ID="$(gh pr view "$PR_NUMBER" --json comments | jq --arg t "$TAG" -r \
-            ".comments[] | select(.body | contains($t)) | .id" | head -n 1)"
+            '.comments[] | select(.body | contains($t)) | .id' | head -n 1)"
           if [[ -n "$COMMENT_ID" ]]; then
             if [[ "$COMMENT_STRATEGY" == "edit" ]]; then
               echo "Updating existing comment ${COMMENT_ID}"
