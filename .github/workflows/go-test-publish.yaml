@@ -13,7 +13,6 @@ on:
         type: string
         required: false
         default: replace # always|edit|replace|off
-
 jobs:
   publish-tests:
     runs-on: ${{ inputs.runs-on }}
@@ -54,11 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           COMMENT_STRATEGY: ${{ inputs.pr-comment }}
-        run: | 
+        run: |+
+
+          set -x
+
           TAG="<!-- go-coverage-tag: ${label} -->"
           echo -e "\n\n${TAG}" >> new-coverage/coverage.md
-          COMMENT_ID="$(gh pr view "$PR_NUMBER" --json comments --jq \
-            ".comments[] | select(.body | contains(\"${TAG}\")) | .id" | head -n 1)"
+          COMMENT_ID="$(gh pr view "$PR_NUMBER" --json comments | jq --arg t "$TAG" -r \
+            ".comments[] | select(.body | contains($t)) | .id" | head -n 1)"
           if [[ -n "$COMMENT_ID" ]]; then
             if [[ "$COMMENT_STRATEGY" == "edit" ]]; then
               echo "Updating existing comment ${COMMENT_ID}"
@@ -73,3 +75,4 @@ jobs:
 
           echo "Posting new coverage report to PR" # fallback / requested always
           gh pr comment "$PR_NUMBER" --body-file new-coverage/coverage.md
+
