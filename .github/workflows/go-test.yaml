@@ -26,7 +26,6 @@ on:
         description: Optional path to a golangci-lint configuration file
         type: string
         required: false
-
 jobs:
   run-tests:
     runs-on: ${{ inputs.runs-on }}
@@ -52,13 +51,13 @@ jobs:
       - uses: golangci/golangci-lint-action@v9
         with:
           args: ${{ hashFiles(inputs.golangci-lint-config) != '' && format('--config={0}', inputs.golangci-lint-config) || '' }}
-        if: inputs.golangci-lint-config != '' || inputs.run-golangci-lint 
+        if: inputs.golangci-lint-config != '' || inputs.run-golangci-lint
       - if: inputs.show-coverage == 'all' || inputs.show-coverage == 'mod' || inputs.show-coverage == 'root' || inputs.show-coverage == 'pkg' || inputs.show-coverage == 'file'
         env:
           grouping: ${{ inputs.show-coverage }}
           base_ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || '' }}
           base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-        run: |
+        run: |+
 
           set -x
           # validate coverage.out
@@ -80,6 +79,7 @@ jobs:
               echo "::warning::unable to read coverage notes for $base_sha"
             fi
           fi
+              base_coverage="$(cat coverage.osum)"
 
           # at this point we have ./coverage.out, our roots, and may have $base_coverage
 
@@ -89,11 +89,12 @@ jobs:
           declare -A pkg_stmts pkg_cov
           declare -A file_stmts file_cov
 
-          while IFS=' ' read -r loc count executed; do
+          while read -r loc count executed; do
             file="${loc%:*}"
             pkg="${file%/*}"
             if [[ "${lastpkg:-}" != "${pkg}" ]]; then
-              mod="$(cd "$(go list -f '{{.Dir}}' "${pkg}" 2>/dev/null || echo ".") && go list -m)"
+              pkgdir="$(go list -f '{{.Dir}}' "${pkg}" 2>/dev/null)"
+              mod="$(cd "${pkgdir:-.}" && go list -m)"
               root="${pkg}"
               while [[ "${root}" != "${mod}" ]] && [[ "${root%/*}" != "${mod}" ]] && [[ "${root}" = *"/"* ]]; do
                 root="${root%/*}"
@@ -101,30 +102,30 @@ jobs:
               lastpkg="${pkg}"
             fi
             (( all_stmts += count ))
-            (( mod_stmts[mod] += count ))
-            (( root_stmts[root] += count ))
-            (( pkg_stmts[pkg] += count ))
-            (( file_stmts[file] += count ))
+            (( mod_stmts[$mod] += count ))
+            (( root_stmts[$root] += count ))
+            (( pkg_stmts[$pkg] += count ))
+            (( file_stmts[$file] += count ))
             if (( executed > 0 )); then
               (( all_cov += count ))
-              (( mod_cov[mod] += count ))
-              (( root_cov[root] += count ))
-              (( pkg_cov[pkg] += count ))
-              (( file_cov[file] += count ))
+              (( mod_cov[$mod] += count ))
+              (( root_cov[$root] += count ))
+              (( pkg_cov[$pkg] += count ))
+              (( file_cov[$file] += count ))
             fi
           done < <(tail -n +2 coverage.out)
 
           # Summarize coverage.out with modules resolved. They may not be resolvable from a future HEAD.
           {
             echo "all:"
-            echo "${GITHUB_REPOSITORY} ${all_stmts:-0} ${all_cov:-0}"
+            echo "${GITHUB_REPOSITORY:-local} ${all_stmts:-0} ${all_cov:-0}"
             metrics() {
               local label=$1
-              local -n stmts="${1}_stmts"
-              local -n cov="${1}_cov"
+              local -n stmts_ref="${1}_stmts"
+              local -n cov_ref="${1}_cov"
               echo "$label:"
-              for k in "${!stmts[@]}"; do
-                echo "${k} ${stmts[$k]} ${cov[$k]:-0}"
+              for k in "${!stmts_ref[@]}"; do
+                echo "${k} ${stmts_ref[$k]} ${cov_ref[$k]:-0}"
               done
             }
             metrics mod
@@ -135,7 +136,7 @@ jobs:
 
           percent() { # 0 or undef => 0.00
             local div="$2"
-            (( div > 0 )) && awk -v n="$1" -v d="$div" 'BEGIN { printf "%.2f" (n/d)*100 }' || echo "0.00"
+            (( div > 0 )) && awk -v n="$1" -v d="$div" 'BEGIN { printf "%.2f", (n/d)*100 }' || echo "0.00"
           }
           delta() { # 0 => +0.00
             awk -v o="$1" -v n="$2" 'BEGIN { printf "%+.2f", (n-o) }'
@@ -147,25 +148,42 @@ jobs:
             # select stats
             case "$grouping" in
               (all) ;;
-              (mod)  declare label=Module -n stmts=mod_stmts -n cov=mod_cov ;;
-              (root) declare label=Root -n stmts=root_stmts -n cov=root_cov ;;
-              (pkg)  declare label=Package -n stmts=pkg_stmts -n cov=pkg_cov ;;
-              (file) declare label=File -n stmts=file_stmts -n cov=file_cov ;;
+              (mod)
+                declare label=Module
+                declare -n stmts=mod_stmts
+                declare -n cov=mod_cov
+                ;;
+              (root)
+                declare label=Root
+                declare -n stmts=root_stmts
+                declare -n cov=root_cov
+                ;;
+              (pkg)
+                declare label=Package
+                declare -n stmts=pkg_stmts
+                declare -n cov=pkg_cov
+                ;;
+              (file)
+                declare label=File
+                declare -n stmts=file_stmts
+                declare -n cov=file_cov
+                ;;
               (*) echo "::error::unknown grouping $grouping" && exit 1 ;;
             esac
 
             if [[ -z "$base_coverage" ]]; then
-              echo "Test coverage for **${GITHUB_REF_NAME}** (${GITHUB_SHA}): **$(percent ${all_cov} ${all_stmts})%**"
-              if [[ -v stmts ]]; then
+              echo "Test coverage for **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): **$(percent ${all_cov} ${all_stmts})%**"
+              if [[ ${#stmts[@]} -gt 0 ]]; then
                 echo
                 echo "| $label | Coverage | Statements |"
                 echo "|:--|--:|--:|"
                 for k in "${!stmts[@]}"; do
                   echo "| ${k} | $(percent ${cov[$k]:-0} ${stmts[$k]:-0})% | ${cov[$k]:-0} of ${stmts[$k]} |"
-                done
+                done | sort -u
               fi
             else
-              declare old_all_stmts old_all_cov -A old_stmts -A old_cov
+              declare old_all_stmts old_all_cov
+              declare -A old_stmts old_cov
               while read -r prev_loc prev_stmts prev_cov; do
                 if [[ "$prev_loc" == *":" ]]; then
                   ingroup="${prev_loc%:}"
@@ -179,19 +197,19 @@ jobs:
               done <<< "$base_coverage"
               npct="$(percent ${all_cov} ${all_stmts})"
               opct="$(percent ${old_all_cov} ${old_all_stmts})"
-              echo "Test coverage change for **${base_ref}** (${base_sha}) to **${GITHUB_REF_NAME}** (${GITHUB_SHA}): **${npct}%** ($(delta $opct $npct)%)"
-              if [[ -v stmts ]]; then
+              echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): **${npct}%** ($(delta $opct $npct)%)"
+              if [[ ${#stmts[@]} -gt 0 ]]; then
                 echo
                 echo "| $label | Coverage | Statements | Change | (Covered) | (Statements) |"
                 echo "|:--|--:|--:|--:|--:|--:|"
-                for k in "${!stmts[@]}"; do
+                for k in "${!stmts[@]}" "${!old_stmts[@]}"; do
                   npct=$(percent ${cov[$k]:-0} ${stmts[$k]:-0})
                   opct=$(percent ${old_cov[$k]:-0} ${old_stmts[$k]:-0})
-                  echo "| ${k} | $npct% | ${cov[$k]:-0} of ${stmts[$k]} | $(delta $opct $npct) | (${opct}%) | (${old_cov[$k]:-0} of ${old_stmts[$k]:-0})|"
-                done
+                  echo "| ${k} | $npct% | ${cov[$k]:-0} of ${stmts[$k]:-0} | $(delta $opct $npct) | (${opct}%) | (${old_cov[$k]:-0} of ${old_stmts[$k]:-0})|"
+                done | sort -u
               fi
             fi
-          } | tee "$GITHUB_STEP_SUMMARY" > coverage.md
+          }
 
       - uses: actions/upload-artifact@v7
         with:
