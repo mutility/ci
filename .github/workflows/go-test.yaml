@@ -57,7 +57,7 @@ jobs:
           grouping: ${{ inputs.show-coverage }}
           base_ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || '' }}
           base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-        run: |+
+        run: |
 
           # validate coverage.out
 
@@ -68,7 +68,7 @@ jobs:
 
           # attempt to load base coverage, if in a PR
 
-          if [[ -v base_sha ]]; then
+          if [[ -n "$base_sha" ]]; then
             if ! git fetch origin "$base_sha" --depth=1; then
               echo "::warning::unable to fetch $base_sha"
             elif ! git fetch origin "+refs/notes/*:refs/notes/*" --depth=1; then
@@ -216,8 +216,6 @@ jobs:
               fi
             fi
           } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
-
-
       - uses: actions/upload-artifact@v7
         with:
           retention-days: 3
