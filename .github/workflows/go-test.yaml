@@ -178,6 +178,9 @@ jobs:
                 for k in "${!stmts[@]}"; do
                   echo "| ${k} | $(percent ${cov[$k]:-0} ${stmts[$k]:-0})% | ${cov[$k]:-0} of ${stmts[$k]} |"
                 done | sort -u
+                if [[ ${#stmts[@]} -gt 1 ]]; then
+                  echo "| **Total** | $(percent ${all_cov} ${all_stmts})% | ${all_cov} of ${all_stmts} |"
+                fi
               fi
             else
               declare old_all_stmts old_all_cov
@@ -205,9 +208,15 @@ jobs:
                   opct=$(percent ${old_cov[$k]:-0} ${old_stmts[$k]:-0})
                   echo "| ${k} | $npct% | ${cov[$k]:-0} of ${stmts[$k]:-0} | $(delta $opct $npct) | (${opct}%) | (${old_cov[$k]:-0} of ${old_stmts[$k]:-0})|"
                 done | sort -u
+                if [[ ${#stmts[@]} -gt 1 ]]; then
+                  npct="$(percent ${all_cov} ${all_stmts})"
+                  opct="$(percent ${old_all_cov} ${old_all_stmts})"
+                  echo "| **Total** | $npct% | ${all_cov} of ${all_stmts} | $(delta $opct $npct) | (${opct}%) | (${old_all_cov} of ${old_all_stmts})|"
+                fi
               fi
             fi
           } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
+
 
       - uses: actions/upload-artifact@v7
         with:
