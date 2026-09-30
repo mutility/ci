@@ -59,11 +59,11 @@ jobs:
 
           TAG="<!-- go-coverage-tag: $label -->"
           echo -e "\n\n$TAG" >> new-coverage/coverage.md
-          COMMENT_ID="$(gh pr view "$PR_NUMBER" --json comments | jq --arg t "$TAG" -r '.comments[] | select(.body | contains($t)) | .url | split("-") | last')"
+          COMMENT_ID="$(gh api "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" | jq --arg t "$TAG" -r '.[] | select(.body | contains($t)) | .id')"
           if [[ -n "$COMMENT_ID" ]]; then
             if [[ "$COMMENT_STRATEGY" == "edit" ]]; then
               echo "Updating existing comment $COMMENT_ID"
-              gh pr comment "$PR_NUMBER" --edit-comment "$(tail -n 1 <<<$COMMENT_ID)" --body-file new-coverage/coverage.md
+              gh api -X PATCH "/repos/$GITHUB_REPOSITORY/issues/comments/$(tail -n 1 <<<$COMMENT_ID)" -F body=@new-coverage/coverage.md
               exit 0
             elif [[ "$COMMENT_STRATEGY" == "replace" ]]; then
               echo "Replacing existing comment $COMMENT_ID"
