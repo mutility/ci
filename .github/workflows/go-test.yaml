@@ -28,7 +28,7 @@ on:
         required: false
 jobs:
   run-tests:
-    name: Test with go ${{ inputs.go-version }} on ${{ runner.os }}
+    name: Test with go ${{ inputs.go-version }} on ${{ input.runs-on }}
     runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
