@@ -223,6 +223,8 @@ jobs:
                 fi
               fi
             fi
+            echo "<small>$(go env GOVERSION) on $(go env GOOS) $(go env GOARCH)</small>"
+
           } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
           {
             if [[ -z "${base_coverage:-}" ]]; then
@@ -232,6 +234,7 @@ jobs:
               opct="$(percent ${old_all_cov} ${old_all_stmts})"
               echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${branch_name:-HEAD}** (${GITHUB_SHA:-none}): [**${npct}%** ($(delta $opct $npct)%)]($summary_url)"
             fi
+            echo "<small>$(go env GOVERSION) on $(go env GOOS) $(go env GOARCH)</small>"
           } > coverage-link.md
       - uses: actions/upload-artifact@v7
         with:
