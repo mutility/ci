@@ -223,6 +223,7 @@ jobs:
                 fi
               fi
             fi
+            echo
             echo "<small>$(go env GOVERSION) on $(go env GOOS) $(go env GOARCH)</small>"
 
           } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
