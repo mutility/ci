@@ -19,7 +19,7 @@ on:
         default: report # report|link
 jobs:
   publish-tests:
-    name: Publish coverage for go ${{ inputs.go-version }} on ${{ ubuntu-latest }}
+    name: Publish coverage for go ${{ inputs.go-version }} on ${{ runner.os }}
     runs-on: ${{ inputs.runs-on }}
     env:
       variant: ${{ format('coverage-{0}-{1}', inputs.runs-on, inputs.go-version) }}

@@ -28,7 +28,7 @@ on:
         required: false
 jobs:
   run-tests:
-    name: Test with go ${{ inputs.go-version }} on ${{ inputs.runs-on }}
+    name: Test with go ${{ inputs.go-version }} on ${{ runner.os }}
     runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
@@ -228,13 +228,12 @@ jobs:
           } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
           {
             if [[ -z "${base_coverage:-}" ]]; then
-              echo "Test coverage for **${branch_name:-HEAD}** (${GITHUB_SHA:-none}): [📊 **$(percent ${all_cov} ${all_stmts})%**]($summary_url)"
+              echo "[📊 **$(percent ${all_cov} ${all_stmts})%**]($summary_url) for **${branch_name:-HEAD}** (${GITHUB_SHA:-none}) using $(go env GOVERSION) on $(go env GOOS) $(go env GOARCH)"
             else
               npct="$(percent ${all_cov} ${all_stmts})"
               opct="$(percent ${old_all_cov} ${old_all_stmts})"
-              echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${branch_name:-HEAD}** (${GITHUB_SHA:-none}): [**${npct}%** ($(delta $opct $npct)%)]($summary_url)"
+              echo "[📊 **${npct}%** ($(delta $opct $npct)%)]($summary_url) for **${base_ref:-BASE}** (${base_sha:-none}) to **${branch_name:-HEAD}** (${GITHUB_SHA:-none}) using $(go env GOVERSION) on $(go env GOOS) $(go env GOARCH)"
             fi
-            echo "<small>$(go env GOVERSION) on $(go env GOOS) $(go env GOARCH)</small>"
           } > coverage-link.md
       - uses: actions/upload-artifact@v7
         with:
