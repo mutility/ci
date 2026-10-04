@@ -58,7 +58,8 @@ jobs:
           grouping: ${{ inputs.show-coverage }}
           base_ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || '' }}
           base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-          SUMMARY_URL: ${{ format('{0}/{1}/actions/runs/{2}#summary-{3}', github.server_url, github.repository, github.run_id, job.check_run_id) }}
+          branch_name: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          summary_url: ${{ format('{0}/{1}/actions/runs/{2}#summary-{3}', github.server_url, github.repository, github.run_id, job.check_run_id) }}
         run: |
 
           # validate coverage.out
@@ -178,7 +179,7 @@ jobs:
             esac
 
             if [[ -z "${base_coverage:-}" ]]; then
-              echo "Test coverage for **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): **$(percent ${all_cov} ${all_stmts})%**"
+              echo "Test coverage for **${branch_name:-HEAD}** (${GITHUB_SHA:-none}): **$(percent ${all_cov} ${all_stmts})%**"
               if [[ ${#stmts[@]} -gt 0 ]]; then
                 echo
                 echo "| $label | Coverage | Statements |"
@@ -204,7 +205,7 @@ jobs:
               done <<< "$base_coverage"
               npct="$(percent ${all_cov} ${all_stmts})"
               opct="$(percent ${old_all_cov} ${old_all_stmts})"
-              echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): **${npct}%** ($(delta $opct $npct)%)"
+              echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${branch_name:-HEAD}** (${GITHUB_SHA:-none}): **${npct}%** ($(delta $opct $npct)%)"
               if [[ ${#stmts[@]} -gt 0 ]]; then
                 echo
                 echo "| $label | Coverage | Statements | Change | (Covered) | (Statements) |"
@@ -224,11 +225,11 @@ jobs:
           } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
           {
             if [[ -z "${base_coverage:-}" ]]; then
-              echo "Test coverage for **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): [**$(percent ${all_cov} ${all_stmts})%**]($SUMMARY_URL)"
+              echo "Test coverage for **${branch_name:-HEAD}** (${GITHUB_SHA:-none}): [📊 **$(percent ${all_cov} ${all_stmts})%**]($summary_url)"
             else
               npct="$(percent ${all_cov} ${all_stmts})"
               opct="$(percent ${old_all_cov} ${old_all_stmts})"
-              echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): [**${npct}%** ($(delta $opct $npct)%)]($SUMMARY_URL)"
+              echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${branch_name:-HEAD}** (${GITHUB_SHA:-none}): [**${npct}%** ($(delta $opct $npct)%)]($summary_url)"
             fi
           } > coverage-link.md
       - uses: actions/upload-artifact@v7
