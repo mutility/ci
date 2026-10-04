@@ -33,6 +33,7 @@ jobs:
       contents: read
     env:
       pkgs: ${{ inputs.go-packages }}
+      variant: ${{ format('coverage-{0}-{1}', inputs.runs-on, inputs.go-version) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -43,7 +44,7 @@ jobs:
       - run: go mod tidy && git diff --exit-code
       - run: go mod download
       - run: go mod verify
-      - run: go generate $pkgs & git diff --exit-code
+      - run: go generate $pkgs && git diff --exit-code
       - run: go build -o /dev/null ${{ inputs.go-packages }}
       - run: go test -v -count=1 -shuffle=on -coverprofile=coverage.out -coverpkg="$pkgs" $pkgs
       - run: go test -v -shuffle=on -run=- -bench=. -benchtime=1x -benchmem $pkgs
@@ -57,6 +58,7 @@ jobs:
           grouping: ${{ inputs.show-coverage }}
           base_ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || '' }}
           base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          SUMMARY_URL: ${{ format('{0}/{1}/actions/runs/{2}#summary-{3}', github.server_url, github.repository, github.run_id, job.check_run_id) }}
         run: |
 
           # validate coverage.out
@@ -68,12 +70,16 @@ jobs:
 
           # attempt to load base coverage, if in a PR
 
-          if [[ -n "$base_sha" ]]; then
+          if [[ -n "${base_sha-}" ]]; then
             if ! git fetch origin "$base_sha" --depth=1; then
               echo "::warning::unable to fetch $base_sha"
             elif ! git fetch origin "+refs/notes/*:refs/notes/*" --depth=1; then
               echo "::warning::unable to fetch coverage notes"
-            elif ! base_coverage="$(git notes --ref go-coverage show "$base_sha" 2>/dev/null)"; then
+            elif base_coverage="$(git notes --ref go-$variant show "$base_sha" 2>/dev/null)"; then
+              true
+            elif base_coverage="$(git notes --ref go-coverage show "$base_sha" 2>/dev/null)"; then
+              echo "::warning::using deprecated coverage notes for $base_sha"
+            else
               base_coverage=""
               echo "::warning::unable to read coverage notes for $base_sha"
             fi
@@ -86,6 +92,8 @@ jobs:
           declare -A root_stmts=() root_cov=()
           declare -A pkg_stmts=() pkg_cov=()
           declare -A file_stmts=() file_cov=()
+          declare old_all_stmts=0 old_all_cov=0
+          declare -A old_stmts=() old_cov=()
 
           while read -r loc count executed; do
             file="${loc%:*}"
@@ -183,8 +191,6 @@ jobs:
                 fi
               fi
             else
-              declare old_all_stmts old_all_cov
-              declare -A old_stmts old_cov
               while read -r prev_loc prev_stmts prev_cov; do
                 if [[ "$prev_loc" == *":" ]]; then
                   ingroup="${prev_loc%:}"
@@ -216,12 +222,22 @@ jobs:
               fi
             fi
           } | tee "${GITHUB_STEP_SUMMARY:-/dev/stderr}" > coverage.md
+          {
+            if [[ -z "${base_coverage:-}" ]]; then
+              echo "Test coverage for **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): [**$(percent ${all_cov} ${all_stmts})%**]($SUMMARY_URL)"
+            else
+              npct="$(percent ${all_cov} ${all_stmts})"
+              opct="$(percent ${old_all_cov} ${old_all_stmts})"
+              echo "Test coverage change for **${base_ref:-BASE}** (${base_sha:-none}) to **${GITHUB_REF_NAME:-HEAD}** (${GITHUB_SHA:-none}): [**${npct}%** ($(delta $opct $npct)%)]($SUMMARY_URL)"
+            fi
+          } > coverage-link.md
       - uses: actions/upload-artifact@v7
         with:
           retention-days: 3
           overwrite: true
-          name: coverage-${{ inputs.runs-on }}-${{ inputs.go-version }}
+          name: ${{ env.variant }}
           path: |
             coverage.out
             coverage.sum
             coverage.md
+            coverage-link.md
