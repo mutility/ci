@@ -28,6 +28,7 @@ on:
         required: false
 jobs:
   run-tests:
+    name: Test with go ${{ inputs.go-version }} on ${{ inputs.runs-on }}
     runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
