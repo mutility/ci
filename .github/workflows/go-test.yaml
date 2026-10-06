@@ -156,7 +156,7 @@ jobs:
             # select stats
             case "$grouping" in
               (all) ;;
-              (mod)
+              (module|mod)
                 declare label=Module
                 declare -n stmts=mod_stmts
                 declare -n cov=mod_cov
@@ -166,7 +166,7 @@ jobs:
                 declare -n stmts=root_stmts
                 declare -n cov=root_cov
                 ;;
-              (pkg)
+              (package|pkg)
                 declare label=Package
                 declare -n stmts=pkg_stmts
                 declare -n cov=pkg_cov
