@@ -25,6 +25,52 @@ This workflow is recommended to run with default privileges (read-only) to maint
 | `run-golangci-lint` | `boolean` | `false` | Run golangci-lint; also implied by golangci-lint-config. |
 | `golangci-lint-config` | `string` | - | Path to a golangci-lint configuration file. |
 
+#### Artifacts
+
+When `show-coverage` is not `off`, this workflow will generate an artifact including raw coverage information, summarized coverage information, a coverage link (markdown) and a coverge report (markdown).
+
+The link includes just the total metric, where the coverage percentage is linked to the full report. The full report includes a table showing coverage by file, package, root (a toplevel package within a module), module (in case of multi-module repositories), or all rolled up into one row. If this table has multiple rows, a total is included at the bottom.
+
+Note that the long SHAs you see here will render as 7 or so character links to your actual code when it's part of the same repository.
+
+> [📊 **82.96%**](https://github.com/mutility/sandbox-parquetry/actions/runs/37180859437#summary-111372975395) for **dependabot/...** (c286675e43ae427f5075e7666ebcdd1be55444f9) using go1.27.1 on linux amd64
+
+vs
+
+> Test coverage for **dependabot/...** (c286675e43ae427f5075e7666ebcdd1be55444f9): **82.96%**
+> 
+> | File | Coverage | Statements |
+> |:--|--:|--:|
+> | github.com/mutility/parquetry/filter.go | 79.31% | 23 of 29 |
+> | github.com/mutility/parquetry/main.go | 89.67% | 295 of 329 |
+> | github.com/mutility/parquetry/reshape.go | 82.93% | 68 of 82 |
+> | github.com/mutility/parquetry/types.go | 58.14% | 50 of 86 |
+> | github.com/mutility/parquetry/write_csv.go | 86.21% | 25 of 29 |
+> | github.com/mutility/parquetry/write_json.go | 80.00% | 16 of 20 |
+> | **Total** | 82.96% | 477 of 575 |
+>
+> <small>go1.27.1 on linux amd64</small>
+
+Or, when coverage information is available for the base version, the table includes the change and prior metrics.  This example comes from a dependabot update that doesn't touch coverage, so you can see +0.00 for all changes.
+
+> [📊 **82.96%** (+0.00%)](https://github.com/mutility/sandbox-parquetry/actions/runs/37180859437#summary-111372975395) for **main** (e675419ed133e35759321eb7c68ff7868bba7115) to **dependabot/...** (c286675e43ae427f5075e7666ebcdd1be55444f9) using go1.27.1 on linux amd64
+
+vs
+
+> Test coverage change for **main** (e675419ed133e35759321eb7c68ff7868bba7115) to **dependabot/...** (c286675e43ae427f5075e7666ebcdd1be55444f9): **82.96%** (+0.00%)
+> 
+> | File | Coverage | Statements | Change | (Covered) | (Statements) |
+> |:--|--:|--:|--:|--:|--:|
+> | github.com/mutility/parquetry/filter.go | 79.31% | 23 of 29 | +0.00 | (79.31%) | (23 of 29)|
+> | github.com/mutility/parquetry/main.go | 89.67% | 295 of 329 | +0.00 | (89.67%) | (295 of 329)|
+> | github.com/mutility/parquetry/reshape.go | 82.93% | 68 of 82 | +0.00 | (82.93%) | (68 of 82)|
+> | github.com/mutility/parquetry/types.go | 58.14% | 50 of 86 | +0.00 | (58.14%) | (50 of 86)|
+> | github.com/mutility/parquetry/write_csv.go | 86.21% | 25 of 29 | +0.00 | (86.21%) | (25 of 29)|
+> | github.com/mutility/parquetry/write_json.go | 80.00% | 16 of 20 | +0.00 | (80.00%) | (16 of 20)|
+> | **Total** | 82.96% | 477 of 575 | +0.00 | (82.96%) | (477 of 575)|
+>
+> <small>go1.27.1 on linux amd64</small>
+
 ### Go Results Publisher (go-test-publish.yaml)
 
 A decoupled, secure reporting mechanism designed to report testing metrics in carefully handled PR commenting patterns.
