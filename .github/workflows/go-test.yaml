@@ -111,17 +111,17 @@ jobs:
               done
               lastpkg="${pkg}"
             fi
-            (( all_stmts += count ))
-            (( mod_stmts[$mod] += count ))
-            (( root_stmts[$root] += count ))
-            (( pkg_stmts[$pkg] += count ))
-            (( file_stmts[$file] += count ))
+            (( all_stmts += count ))         || true
+            (( mod_stmts[$mod] += count ))   || true
+            (( root_stmts[$root] += count )) || true
+            (( pkg_stmts[$pkg] += count ))   || true
+            (( file_stmts[$file] += count )) || true
             if (( executed > 0 )); then
-              (( all_cov += count ))
-              (( mod_cov[$mod] += count ))
-              (( root_cov[$root] += count ))
-              (( pkg_cov[$pkg] += count ))
-              (( file_cov[$file] += count ))
+              (( all_cov += count ))         || true
+              (( mod_cov[$mod] += count ))   || true
+              (( root_cov[$root] += count )) || true
+              (( pkg_cov[$pkg] += count ))   || true
+              (( file_cov[$file] += count )) || true
             fi
           done < <(tail -n +2 coverage.out)
 
