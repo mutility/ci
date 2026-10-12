@@ -63,6 +63,8 @@ jobs:
           summary_url: ${{ format('{0}/{1}/actions/runs/{2}#summary-{3}', github.server_url, github.repository, github.run_id, job.check_run_id) }}
         run: |
 
+          [[ "${RUNNER_DEBUG}" = "1" ]] && set -x
+
           # validate coverage.out
 
           if ! [[ -f coverage.out ]]; then

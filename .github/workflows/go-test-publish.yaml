@@ -35,7 +35,8 @@ jobs:
       - if: github.event_name == 'push'
         run: |
 
-          set -x
+          [[ "${RUNNER_DEBUG}" = "1" ]] && set -x
+
           if [[ ! -f new-coverage/coverage.sum ]]; then
             echo "::warning::No coverage summary artifact found"
             exit 0
